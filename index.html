@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI社長カンパニー</title>
+<meta name="description" content="Claude Codeで、副業の受注業務（案件選定・応募文・返信・要件整理・納品準備）を回すAIエージェントの制作事例。AIが準備し、人が決める。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=JetBrains+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<style>
+  /* 既存ポートフォリオ（portfolio-site）の紺×ブルーを引き継いだ、ダーク固定のデザイン */
+  :root {
+    color-scheme: dark;
+    --ground:   #0b0d18;
+    --ground-2: #0f1222;
+    --surface:  #141830;
+    --line:     rgba(120, 160, 255, 0.16);
+    --line-2:   rgba(120, 160, 255, 0.28);
+    --ink:      #e6e9f2;
+    --ink-2:    #a3abc0;
+    --ink-3:    #6b7390;
+    --accent:   #4a9eff;
+    --accent-dim: rgba(74, 158, 255, 0.12);
+    --seal:     #e5484d;
+    --seal-dim: rgba(229, 72, 77, 0.10);
+    --ok:       #3fcf8e;
+
+    --f-display: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
+    --f-body: "BIZ UDPGothic", "Hiragino Sans", "Meiryo", sans-serif;
+    --f-mono: "JetBrains Mono", "Consolas", "BIZ UDGothic", monospace;
+
+    --fs-xs: 0.75rem;
+    --fs-sm: 0.875rem;
+    --fs-base: 1rem;
+    --fs-md: 1.125rem;
+    --fs-lg: 1.5rem;
+    --fs-xl: 2rem;
+    --fs-2xl: clamp(1.875rem, 4.4vw, 2.875rem);
+
+    --r-sm: 6px;
+    --r-md: 12px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    padding-inline: 20px;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: var(--fs-base);
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; word-break: auto-phrase; margin: 0; }
+  .hero > *, .stack > *, .sec-head > *, .bars > * { min-width: 0; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+  code, .mono { font-family: var(--f-mono); }
+
+  .wrap { max-width: 1040px; margin-inline: auto; }
+
+  /* ---------- ヘッダー ---------- */
+  .top {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding-block: 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { font-family: var(--f-display); font-weight: 900; letter-spacing: 0.06em; color: var(--ink); text-decoration: none; }
+  .brand span { color: var(--accent); }
+  .top nav { display: flex; gap: 20px; flex-wrap: wrap; font-size: var(--fs-sm); }
+  .top nav a { color: var(--ink-2); text-decoration: none; }
+  .top nav a:hover { color: var(--ink); }
+
+  /* ---------- ヒーロー ---------- */
+  .hero {
+    display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 48px; align-items: center;
+    padding-block: 64px 72px;
+    position: relative;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0 -20px; z-index: -1; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(74,158,255,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(74,158,255,0.045) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 30% 40%, #000 20%, transparent 75%);
+  }
+  .eyebrow {
+    display: inline-block; font-size: var(--fs-xs); letter-spacing: 0.18em;
+    color: var(--accent); border: 1px solid var(--line-2); border-radius: 999px;
+    padding: 2px 12px; margin-bottom: 20px;
+  }
+  .hero h1 { font-size: var(--fs-2xl); font-weight: 900; line-height: 1.25; letter-spacing: 0.01em; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero .lead { margin-top: 20px; color: var(--ink-2); max-width: 34em; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; }
+  .chip {
+    font-size: var(--fs-xs); padding: 3px 10px; border-radius: 999px;
+    background: var(--accent-dim); border: 1px solid var(--line); color: var(--accent);
+  }
+
+  /* 端末風パネル：実際の /weekly のやり取り */
+  .term {
+    background: #080a14; border: 1px solid var(--line-2); border-radius: var(--r-md);
+    font-family: var(--f-mono); font-size: 0.8125rem; line-height: 1.75;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+  .term__bar {
+    display: flex; align-items: center; gap: 6px; padding: 10px 14px;
+    border-bottom: 1px solid var(--line); color: var(--ink-3); font-size: var(--fs-xs);
+  }
+  .term__bar i { width: 9px; height: 9px; border-radius: 50%; background: #2a2f4a; display: block; }
+  .term__bar b { font-weight: 400; margin-left: 8px; }
+  .term__body { padding: 16px 18px 18px; overflow-x: auto; white-space: pre; color: var(--ink-2); }
+  .t-user { color: var(--ink); }
+  .t-user::before { content: "> "; color: var(--accent); }
+  .t-ai { color: var(--accent); }
+  .t-h { color: var(--ink); font-weight: 500; }
+  .t-dim { color: var(--ink-3); }
+  .t-stop { color: var(--seal); }
+
+  /* ---------- セクション共通 ---------- */
+  section.block { padding-block: 72px; border-top: 1px solid var(--line); }
+  .sec-head { display: grid; grid-template-columns: 220px 1fr; gap: 32px; margin-bottom: 40px; }
+  .sec-head .label { font-size: var(--fs-xs); letter-spacing: 0.2em; color: var(--ink-3); padding-top: 10px; }
+  .sec-head h2 { font-size: var(--fs-xl); font-weight: 700; line-height: 1.4; }
+  .sec-head p { margin-top: 12px; color: var(--ink-2); max-width: 40em; }
+  .sec-body { margin-left: 252px; }
+
+  /* ---------- 背景 ---------- */
+  .problem { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+  .problem > div { background: var(--ground); padding: 24px; }
+  .problem h3 { font-size: var(--fs-base); font-weight: 700; margin-bottom: 8px; }
+  .problem p { font-size: var(--fs-sm); color: var(--ink-2); }
+
+  /* ---------- 業務フロー（縦のタイムライン） ---------- */
+  .flow { list-style: none; margin: 0; padding: 0; position: relative; }
+  .flow::before { content: ""; position: absolute; left: 21px; top: 8px; bottom: 8px; width: 1px; background: var(--line-2); }
+  .flow li { display: grid; grid-template-columns: 44px 1fr; gap: 20px; padding-block: 12px; position: relative; }
+  .node {
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--ground); position: relative; z-index: 1;
+    font-family: var(--f-mono); font-size: var(--fs-xs);
+  }
+  .node--ai { border: 1px solid var(--accent); color: var(--accent); }
+  .node--seal {
+    border: 2px solid var(--seal); color: var(--seal); background: var(--ground);
+    font-family: var(--f-display); font-weight: 900; font-size: 0.6875rem; line-height: 1.1;
+    transform: rotate(-10deg); text-align: center;
+  }
+  .flow .who { font-size: var(--fs-xs); letter-spacing: 0.12em; color: var(--ink-3); }
+  .flow .who code { color: var(--accent); letter-spacing: 0; margin-left: 8px; }
+  .flow h3 { font-size: var(--fs-md); font-weight: 700; margin-top: 2px; }
+  .flow p { font-size: var(--fs-sm); color: var(--ink-2); margin-top: 4px; max-width: 38em; }
+  .flow li.is-seal h3 { color: var(--ink); }
+  .flow li.is-seal .who { color: var(--seal); }
+  .flow li.is-seal > div:last-child {
+    background: var(--seal-dim); border: 1px solid rgba(229,72,77,0.22);
+    border-radius: var(--r-sm); padding: 10px 14px;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; font-size: var(--fs-sm); color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .legend i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .legend .l-ai { border: 1px solid var(--accent); }
+  .legend .l-seal { border: 2px solid var(--seal); }
+
+  /* ---------- 4つの業務 ---------- */
+  .cmds { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .cmd { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 24px; display: flex; flex-direction: column; gap: 10px; }
+  .cmd__head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .cmd__name { font-family: var(--f-mono); font-size: var(--fs-md); color: var(--accent); }
+  .cmd__say { font-size: var(--fs-xs); color: var(--ink-3); }
+  .cmd h3 { font-size: var(--fs-base); font-weight: 700; }
+  .cmd ul { margin: 0; padding-left: 1.1em; font-size: var(--fs-sm); color: var(--ink-2); }
+  .cmd li + li { margin-top: 4px; }
+  .status { align-self: flex-start; font-size: var(--fs-xs); padding: 1px 10px; border-radius: 999px; margin-top: auto; }
+  .status--run { color: var(--ok); background: rgba(63,207,142,0.10); border: 1px solid rgba(63,207,142,0.3); }
+  .status--ready { color: var(--ink-2); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); }
+
+  /* ---------- 設計の要点 ---------- */
+  .points { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px 40px; }
+  .point h3 { font-size: var(--fs-base); font-weight: 700; padding-bottom: 8px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+  .point p { font-size: var(--fs-sm); color: var(--ink-2); }
+  .point code { font-size: 0.8em; color: var(--ink); background: rgba(255,255,255,0.05); padding: 1px 5px; border-radius: 4px; }
+
+  /* ---------- 運用記録 ---------- */
+  .funnel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; margin-bottom: 40px; }
+  .funnel > div { background: var(--ground); padding: 20px; }
+  .funnel .num { font-family: var(--f-display); font-weight: 900; font-size: var(--fs-xl); line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .funnel .num small { font-size: var(--fs-sm); font-weight: 500; margin-left: 2px; color: var(--ink-2); }
+  .funnel .cap { font-size: var(--fs-xs); color: var(--ink-2); margin-top: 4px; }
+  .funnel > div:nth-child(3) .num { color: var(--accent); }
+
+  .chart-title { font-size: var(--fs-sm); font-weight: 700; margin-bottom: 4px; }
+  .chart-sub { font-size: var(--fs-xs); color: var(--ink-3); margin-bottom: 20px; }
+  .bars { display: grid; grid-template-columns: minmax(0, 15em) 1fr; row-gap: 14px; column-gap: 20px; align-items: center; }
+  .bars .name { font-size: var(--fs-sm); color: var(--ink-2); line-height: 1.5; }
+  .track { position: relative; height: 16px; }
+  .track::before { /* 60点ライン */
+    content: ""; position: absolute; left: 60%; top: -8px; bottom: -8px;
+    border-left: 1px dashed var(--seal); opacity: 0.7;
+  }
+  .track::after { /* 基線 */
+    content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line);
+  }
+  .bar {
+    position: absolute; left: 0; top: 2px; height: 12px; z-index: 1;
+    background: var(--accent); border-radius: 0 4px 4px 0;
+  }
+  .bar:hover { filter: brightness(1.2); }
+  .bar .val {
+    position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%);
+    font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--ink); white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .axis { position: relative; height: 18px; font-family: var(--f-mono); font-size: 0.6875rem; color: var(--ink-3); }
+  .axis span { position: absolute; transform: translateX(-50%); }
+  .axis span:first-child { transform: none; }
+  .axis span:last-child { transform: translateX(-100%); }
+  .axis .t60 { color: var(--seal); }
+
+  .table-wrap { overflow-x: auto; margin-top: 32px; border: 1px solid var(--line); border-radius: var(--r-md); }
+  table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); min-width: 620px; }
+  th, td { padding: 10px 14px; text-align: right; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-weight: 700; color: var(--ink-2); font-size: var(--fs-xs); background: var(--ground-2); }
+  thead th small { display: block; font-weight: 400; color: var(--ink-3); font-family: var(--f-mono); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.total { font-weight: 700; color: var(--accent); font-family: var(--f-mono); }
+  td { color: var(--ink); }
+  .note { font-size: var(--fs-xs); color: var(--ink-3); margin-top: 12px; }
+
+  .cutoff { margin-top: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .cutoff div { border: 1px dashed var(--line-2); border-radius: var(--r-sm); padding: 12px 14px; font-size: var(--fs-sm); color: var(--ink-2); }
+  .cutoff b { display: block; color: var(--ink); font-weight: 700; font-size: var(--fs-sm); margin-bottom: 2px; }
+
+  /* ---------- 構成 ---------- */
+  .stack { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; }
+  .tree {
+    background: #080a14; border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 18px 20px; font-family: var(--f-mono); font-size: 0.8125rem; line-height: 1.8;
+    white-space: pre; overflow-x: auto; color: var(--ink-2); margin: 0;
+  }
+  .tree b { color: var(--ink); font-weight: 500; }
+  .tree i { color: var(--ink-3); font-style: normal; }
+  .tech { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+  .tech li { background: var(--ground); padding: 14px 18px; display: grid; grid-template-columns: 8.5em 1fr; gap: 12px; font-size: var(--fs-sm); }
+  .tech li b { color: var(--ink); font-weight: 700; }
+  .tech li span { color: var(--ink-2); }
+
+  /* ---------- 提供できること ---------- */
+  .offer { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .offer > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 22px; }
+  .offer h3 { font-size: var(--fs-base); font-weight: 700; margin-bottom: 12px; }
+  .offer dl { margin: 0; font-size: var(--fs-sm); display: grid; gap: 8px; }
+  .offer dt { font-size: var(--fs-xs); color: var(--ink-3); letter-spacing: 0.08em; }
+  .offer dd { margin: 0; color: var(--ink-2); }
+  .offer dd.seal { color: var(--ink); }
+  .offer dd.seal::before { content: "決裁"; font-family: var(--f-display); font-weight: 900; font-size: 0.625rem; color: var(--seal); border: 1.5px solid var(--seal); border-radius: 50%; padding: 3px 3px; margin-right: 8px; display: inline-block; transform: rotate(-10deg); line-height: 1; vertical-align: 1px; }
+
+  /* ---------- フッター ---------- */
+  .cta { padding-block: 64px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .cta h2 { font-size: var(--fs-lg); font-weight: 700; }
+  .cta p { color: var(--ink-2); font-size: var(--fs-sm); margin-top: 8px; max-width: 36em; }
+  .btn {
+    display: inline-block; padding: 12px 24px; border-radius: 999px; font-weight: 700; font-size: var(--fs-sm);
+    background: var(--accent); color: #fff; text-decoration: none; box-shadow: 0 6px 20px rgba(74,158,255,0.3);
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+  .btn:hover { background: #6cb4ff; transform: translateY(-2px); }
+  footer { padding-block: 24px 40px; border-top: 1px solid var(--line); font-size: var(--fs-xs); color: var(--ink-3); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+  /* ---------- レスポンシブ ---------- */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: minmax(0, 1fr); gap: 36px; padding-block: 48px 56px; }
+    .sec-head { grid-template-columns: 1fr; gap: 8px; }
+    .sec-head .label { padding-top: 0; }
+    .sec-body { margin-left: 0; }
+    .stack { grid-template-columns: 1fr; }
+    .offer { grid-template-columns: 1fr; }
+    .funnel { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    body { padding-inline: 16px; }
+    section.block { padding-block: 56px; }
+    .top nav { display: none; }
+    .problem, .cmds, .points { grid-template-columns: 1fr; }
+    .bars { grid-template-columns: 1fr; row-gap: 6px; }
+    .bars .track { margin-bottom: 10px; margin-right: 40px; }
+    .bars .axis-spacer { display: none; }
+    .axis { margin-right: 40px; }
+    .tech li { grid-template-columns: 1fr; gap: 2px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .btn, .btn:hover { transition: none; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap" lang="ja">
+
+  <header class="top">
+    <a class="brand" href="#top">AI<span>社長</span>カンパニー</a>
+    <nav aria-label="ページ内">
+      <a href="#flow">しくみ</a>
+      <a href="#design">設計</a>
+      <a href="#record">運用記録</a>
+      <a href="#stack">構成</a>
+      <a href="#offer">ご提供</a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- ヒーロー -->
+    <section class="hero">
+      <div>
+        <p class="eyebrow">制作事例 ／ AIエージェント</p>
+        <h1>AIが<em>社長</em>として、<br>副業の受注業務を回す。</h1>
+        <p class="lead">
+          案件選び、応募文の下書き、返信の準備、受注後の要件整理、納品物の準備。開発以外の業務を、Claude Code で動く「AI社長」に任せ、毎週の業務として実際に回しています。
+          ただし、どの案件に応募するかを決めるのも、送るのも人です。AIに任せる範囲と人が判断するところを分ける、「業務をAIに任せる仕組み」の一例です。
+        </p>
+        <div class="facts">
+          <span class="chip">Claude Code</span>
+          <span class="chip">業務の手順書 6種</span>
+          <span class="chip">人の決裁ポイント 5か所</span>
+          <span class="chip">Python ／ SQLite</span>
+        </div>
+      </div>
+
+      <div class="term" role="img" aria-label="AI社長に週次提案を依頼したときの画面の例（案件名は架空）">
+        <div class="term__bar"><i></i><i></i><i></i><b>AI社長 — 週次提案（画面の例・案件名は架空）</b></div>
+<div class="term__body"><span class="t-user">今週の案件を出して</span>
+<span class="t-ai">● /weekly</span>
+  案件情報を集めるツールを実行してよいですか？
+  <span class="t-dim">所要4〜7分・AIでの評価に少額の費用がかかります</span>
+<span class="t-user">OK</span>
+<span class="t-ai">● 採点しました</span>
+  <span class="t-h"># 週次提案（募集中120件 → 提案4件）</span>
+  1. 社内マニュアルの検索ボット  <span class="t-h">74点</span> <span class="t-dim">倍率3倍</span>
+  2. 日報Excelの集計を自動化     <span class="t-h">70点</span> <span class="t-dim">倍率8倍</span>
+  3. 問い合わせメールの仕分け    <span class="t-h">66点</span> <span class="t-dim">倍率12倍</span>
+  4. 見積書づくりの効率化        <span class="t-h">61点</span> <span class="t-dim">倍率5倍</span>
+  <span class="t-dim">保留 3件 ／ 足切りの理由つき一覧あり</span>
+
+  <span class="t-stop">■ 応募文がほしい番号を教えてください。</span></div>
+      </div>
+    </section>
+
+    <!-- 背景 -->
+    <section class="block" id="why">
+      <div class="sec-head">
+        <p class="label">背景</p>
+        <div>
+          <h2>開発の時間は、開発に使いたい。</h2>
+          <p>本業を持ちながらの副業は、使える時間が週10〜20時間ほどです。その中で、受注にまつわる周辺の業務が思った以上に時間を取っていました。</p>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="problem">
+          <div>
+            <h3>案件を選ぶのに時間がかかる</h3>
+            <p>募集は週に100件以上。受けられるか・割に合うかを1件ずつ読んで判断するだけで、平日の夜が終わってしまう。</p>
+          </div>
+          <div>
+            <h3>判断の基準がぶれる</h3>
+            <p>疲れていると条件の悪い案件にも手を出したくなる。応募するかどうかの線引きが、日によって変わってしまう。</p>
+          </div>
+          <div>
+            <h3>書類仕事が開発を圧迫する</h3>
+            <p>応募文、要件の確認、使い方の説明書、納品のメッセージ。どれも大事だが、毎回ゼロから書くと重い。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 業務フロー -->
+    <section class="block" id="flow">
+      <div class="sec-head">
+        <p class="label">しくみ</p>
+        <div>
+          <h2>AIが準備し、人が決める。<br>その繰り返しで、受注から納品まで進む。</h2>
+          <p>AI社長は判断材料をつくる役、オーナー（人）は決める役です。外部への送信が発生する手前では、AIは必ず止まって指示を待ちます。</p>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="legend">
+          <span><i class="l-ai"></i>AI社長が行う</span>
+          <span><i class="l-seal"></i>オーナーの決裁（AIはここで止まる）</span>
+        </div>
+        <ol class="flow">
+          <li>
+            <div class="node node--ai">AI</div>
+            <div>
+              <p class="who">AI社長<code>/weekly</code></p>
+              <h3>今週の案件を採点して、一覧で示す</h3>
+              <p>公開されている案件情報を、明文化した選定基準で100点満点に採点。基準を満たす案件を最大10件、推す理由・懸念点・競争の激しさ（倍率）を添えて一覧にします。応募文はまだ書きません。</p>
+            </div>
+          </li>
+          <li class="is-seal">
+            <div class="node node--seal">決<br>裁</div>
+            <div>
+              <p class="who">オーナー</p>
+              <h3>応募文を書く案件を、番号で選ぶ</h3>
+            </div>
+          </li>
+          <li>
+            <div class="node node--ai">AI</div>
+            <div>
+              <p class="who">AI社長<code>/apply</code></p>
+              <h3>選ばれた案件だけ、応募文を下書きする</h3>
+              <p>書く前に、クライアントの困りごと・納品後に業務がどう変わるかを整理したメモを残し、そのうえで下書きします。選ばれていない案件の下書きはつくりません。</p>
+            </div>
+          </li>
+          <li class="is-seal">
+            <div class="node node--seal">決<br>裁</div>
+            <div>
+              <p class="who">オーナー</p>
+              <h3>内容を確かめて、自分の言葉に直し、自分で応募する</h3>
+            </div>
+          </li>
+          <li>
+            <div class="node node--ai">AI</div>
+            <div>
+              <p class="who">AI社長<code>/reply</code></p>
+              <h3>返信が届いたら、返事の案をつくる</h3>
+              <p>相手の質問に答える案と、こちらから確かめたいことを整理します。外部の連絡先へ誘導されたときは、サービス上で続けたいと伝える案にします。</p>
+            </div>
+          </li>
+          <li class="is-seal">
+            <div class="node node--seal">決<br>裁</div>
+            <div>
+              <p class="who">オーナー</p>
+              <h3>確かめて、自分で送る</h3>
+            </div>
+          </li>
+          <li class="is-seal">
+            <div class="node node--seal">決<br>裁</div>
+            <div>
+              <p class="who">オーナー</p>
+              <h3>「受注した」とAIに伝える</h3>
+              <p>この一言があるまで、AIは開発に着手しません。</p>
+            </div>
+          </li>
+          <li>
+            <div class="node node--ai">AI</div>
+            <div>
+              <p class="who">AI社長<code>/kickoff</code></p>
+              <h3>要件を整理し、確認事項を下書きする</h3>
+              <p>目的・機能・受け入れ条件・範囲外を要件書にまとめ、足りない点をクライアントが答えやすい選択式の質問にします。</p>
+            </div>
+          </li>
+          <li class="is-seal">
+            <div class="node node--seal">決<br>裁</div>
+            <div>
+              <p class="who">オーナー</p>
+              <h3>確認事項をクライアントへ送り、回答を持ち帰る</h3>
+            </div>
+          </li>
+          <li>
+            <div class="node node--ai">AI</div>
+            <div>
+              <p class="who">AI社長<code>/deliver</code></p>
+              <h3>開発・検証し、納品物をそろえる</h3>
+              <p>受け入れ条件を1つずつ実際に動かして確認。ソース、非エンジニア向けの使い方、設定の雛形、納品メッセージ案を準備します。</p>
+            </div>
+          </li>
+          <li class="is-seal">
+            <div class="node node--seal">決<br>裁</div>
+            <div>
+              <p class="who">オーナー</p>
+              <h3>確認して、納品する</h3>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 4つの業務 -->
+    <section class="block" id="commands">
+      <div class="sec-head">
+        <p class="label">業務の呼び出し方</p>
+        <div>
+          <h2>普段の言葉で頼めば、決まった手順で動く。</h2>
+          <p>業務ごとに手順書（カスタムコマンド）を6種類用意しました。毎回同じ品質で、抜け漏れなく進みます。</p>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="cmds">
+          <article class="cmd">
+            <div class="cmd__head"><span class="cmd__name">/weekly</span><span class="cmd__say">「今週の案件を出して」</span></div>
+            <h3>週次の案件提案</h3>
+            <ul>
+              <li>案件情報を集めるツールを動かす前に、所要時間と費用を示して許可を取る</li>
+              <li>足切り → 採点の順で評価し、上位は案件ページの本文まで読む</li>
+              <li>応募が殺到している案件は、倍率に応じて減点・足切り</li>
+              <li>一覧を示して止まる。応募文は、選ばれた案件だけ</li>
+            </ul>
+            <span class="status status--run">運用中</span>
+          </article>
+          <article class="cmd">
+            <div class="cmd__head"><span class="cmd__name">/apply</span><span class="cmd__say">「1番と3番で応募文を書いて」</span></div>
+            <h3>応募文の下書き</h3>
+            <ul>
+              <li>主語はクライアント。技術を並べるのではなく、業務がどう良くなるかを中心に</li>
+              <li>依頼の理解 → 価値 → 方法 → 実績 → 進め方 → 見積案 → 質問 の構成</li>
+              <li>実績を盛らない・外部の連絡先を書かない</li>
+            </ul>
+            <span class="status status--run">運用中</span>
+          </article>
+          <article class="cmd">
+            <div class="cmd__head"><span class="cmd__name">/reply</span><span class="cmd__say">「◯◯でメッセージが来た」</span></div>
+            <h3>返信の下書き</h3>
+            <ul>
+              <li>相手の質問への答えと、こちらから確かめたいことを整理</li>
+              <li>外部の連絡先へ誘導されたら、サービス上で続けたいと丁寧に伝える</li>
+            </ul>
+            <span class="status status--run">運用中</span>
+          </article>
+          <article class="cmd">
+            <div class="cmd__head"><span class="cmd__name">/status</span><span class="cmd__say">「今どうなってる？」</span></div>
+            <h3>今の状態の確認</h3>
+            <ul>
+              <li>締切が近い案件と、オーナーの判断待ちを先に示す</li>
+              <li>締切を過ぎた案件は「期限切れ」に片付ける</li>
+            </ul>
+            <span class="status status--run">運用中</span>
+          </article>
+          <article class="cmd">
+            <div class="cmd__head"><span class="cmd__name">/kickoff</span><span class="cmd__say">「◯◯を受注した」</span></div>
+            <h3>受注後の要件整理</h3>
+            <ul>
+              <li>目的・機能（必須／あれば良い）・入出力・動作環境・受け入れ条件を整理</li>
+              <li>要件の穴を、選択式や具体例つきの質問にして下書き</li>
+            </ul>
+            <span class="status status--ready">実装済み・初受注から稼働</span>
+          </article>
+          <article class="cmd">
+            <div class="cmd__head"><span class="cmd__name">/deliver</span><span class="cmd__say">「◯◯の納品準備をして」</span></div>
+            <h3>検証と納品物の準備</h3>
+            <ul>
+              <li>受け入れ条件をすべて実際に動かし、結果を検証記録に残す</li>
+              <li>秘密情報・クライアントのデータが混ざっていないか最終チェック</li>
+            </ul>
+            <span class="status status--ready">実装済み・初受注から稼働</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 設計の要点 -->
+    <section class="block" id="design">
+      <div class="sec-head">
+        <p class="label">設計の要点</p>
+        <div>
+          <h2>任せられるAIにするために、決めたこと。</h2>
+          <p>AIに業務を任せるときに大事なのは、賢さよりも「どこまで任せ、何を基準に判断させるか」だと考えています。</p>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="points">
+          <div class="point">
+            <h3>外部への送信は、すべて人が行う</h3>
+            <p>応募・メッセージ・納品・見積の確定は、AIの権限の外に置きました。AIが止まる場所を5か所に決め、指示があるまで先へ進みません。</p>
+          </div>
+          <div class="point">
+            <h3>判断の基準を、文書で渡す</h3>
+            <p>強み・稼働条件・受けない案件を <code>事業定義.md</code>、採点の配点を <code>選定基準.md</code> に明文化。AIの判断に一貫性が出て、理由も説明できます。</p>
+          </div>
+          <div class="point">
+            <h3>水増しをしない</h3>
+            <p>提案ラインに届く案件が無い週は「今週は適切な案件なし」と報告します。10件そろえることより、判断材料として正直であることを優先しました。</p>
+          </div>
+          <div class="point">
+            <h3>競争の激しさも、判断に入れる</h3>
+            <p>強みに合っていても、応募が殺到している案件は受注の見込みがほとんどありません。倍率（応募数 ÷ 残り枠）で減点し、100倍以上は足切りにしました。応募文を書く手間を、勝ち目のある案件に回すためです。</p>
+          </div>
+          <div class="point">
+            <h3>状態の記録は、1か所だけ</h3>
+            <p>全案件の状態（提案 → 応募済 → 受注 → 納品済）は <code>台帳.md</code> だけが持ちます。提案済みの案件は次週の候補から自動で外れます。</p>
+          </div>
+          <div class="point">
+            <h3>既存のツールには、読み取りだけで連携</h3>
+            <p>以前に作った、案件情報を整理するツールは改変せず、データベースを読み取り専用で開く小さなスクリプトを挟みました。既存の仕組みを壊さずに機能を足す形です。</p>
+          </div>
+          <div class="point">
+            <h3>規約とお客様のデータを守る</h3>
+            <p>規約上グレーな依頼は採点前に足切り。クライアントから預かったデータやAPIキーは、案件フォルダの外へ出さないことを社長の規則にしています。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 運用記録 -->
+    <section class="block" id="record">
+      <div class="sec-head">
+        <p class="label">運用記録</p>
+        <div>
+          <h2>2026年10月 第1週の週次提案</h2>
+          <p>実際に回した1週分の件数です。145件の募集から本文まで読んだのは21件、提案したのは5件でした。下の採点の表は、採点のしかたを示すための例です（案件名と点数は架空）。</p>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="funnel">
+          <div><p class="num">145<small>件</small></p><p class="cap">募集中の案件</p></div>
+          <div><p class="num">21<small>件</small></p><p class="cap">本文まで読んで判断</p></div>
+          <div><p class="num">5<small>件</small></p><p class="cap">提案（基準を満たす）</p></div>
+          <div><p class="num">6<small>件</small></p><p class="cap">保留（オーナー判断へ）</p></div>
+        </div>
+
+        <p class="chart-title">採点の例（案件名と点数は架空）</p>
+        <p class="chart-sub">100点満点・破線が提案ライン（60点）</p>
+        <div class="bars" role="img" aria-label="採点の例（架空）。74点、70点、66点、61点。いずれも提案ラインの60点を上回る。">
+          <span class="name">社内マニュアルの検索ボット</span>
+          <div class="track"><div class="bar" style="width:74%" title="74点"><span class="val">74</span></div></div>
+          <span class="name">日報Excelの集計を自動化</span>
+          <div class="track"><div class="bar" style="width:70%" title="70点"><span class="val">70</span></div></div>
+          <span class="name">問い合わせメールの仕分け</span>
+          <div class="track"><div class="bar" style="width:66%" title="66点"><span class="val">66</span></div></div>
+          <span class="name">見積書づくりの効率化</span>
+          <div class="track"><div class="bar" style="width:61%" title="61点"><span class="val">61</span></div></div>
+          <span class="axis-spacer"></span>
+          <div class="axis" aria-hidden="true">
+            <span style="left:0">0</span>
+            <span class="t60" style="left:60%">60</span>
+            <span style="left:100%">100</span>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>案件（架空の例）</th>
+                <th>強みとの一致<small>/40</small></th>
+                <th>実現性<small>/20</small></th>
+                <th>報酬<small>/20</small></th>
+                <th>受注の見込み<small>/10</small></th>
+                <th>安全性<small>/10</small></th>
+                <th>合計</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>社内マニュアルの検索ボット</td><td>36</td><td>14</td><td>8</td><td>8</td><td>8</td><td class="total">74</td></tr>
+              <tr><td>日報Excelの集計を自動化</td><td>28</td><td>18</td><td>10</td><td>6</td><td>8</td><td class="total">70</td></tr>
+              <tr><td>問い合わせメールの仕分け</td><td>32</td><td>12</td><td>12</td><td>4</td><td>6</td><td class="total">66</td></tr>
+              <tr><td>見積書づくりの効率化</td><td>24</td><td>16</td><td>8</td><td>7</td><td>6</td><td class="total">61</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">実際の提案では、案件名と点数の内訳に加えて「推す理由」「懸念点」「倍率」を文章で添えています。クライアントに配慮し、このページには実在の案件を載せていません。</p>
+
+        <div class="cutoff">
+          <div><b>稼働時間が合わない</b>週30時間以上・フルタイムの募集</div>
+          <div><b>必須条件が合わない</b>通勤圏の指定、特定機材での実務経験など</div>
+          <div><b>規約・倫理面で見送り</b>連絡先を収集するツールの依頼</div>
+          <div><b>単価が低すぎる</b>時給換算で基準を大きく下回るもの</div>
+          <div><b>事業の範囲外</b>ライター・SNS運用・事務など（募集の約半数）</div>
+        </div>
+        <p class="note">足切りした案件も、理由を1行ずつ残しています。オーナーは提案だけでなく「なぜ外したか」まで確認できます。</p>
+      </div>
+    </section>
+
+    <!-- 構成 -->
+    <section class="block" id="stack">
+      <div class="sec-head">
+        <p class="label">構成と技術</p>
+        <div>
+          <h2>フォルダ1つで完結する会社。</h2>
+          <p>規則・方針・手順・記録をすべてテキストファイルで持つので、中身を誰でも読めて、直すのも簡単です。</p>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="stack">
+<pre class="tree" aria-label="フォルダ構成"><b>AI社長/</b>
+├─ <b>CLAUDE.md</b>       <i>会社の憲法（役割・止まる場所）</i>
+├─ <b>台帳.md</b>         <i>全案件の状態（唯一の記録）</i>
+├─ 会社方針/
+│   ├─ 事業定義.md  <i>強み・稼働条件・受けない案件</i>
+│   └─ 選定基準.md  <i>採点の配点と提案ライン</i>
+├─ 週次提案/        <i>週ごとの提案（2026-W41.md …）</i>
+├─ 案件/&lt;案件ID&gt;/   <i>1案件1フォルダ</i>
+│   ├─ 応募文.md
+│   ├─ 要件.md ／ 確認事項.md
+│   ├─ src/        <i>開発したツール</i>
+│   └─ 納品/        <i>納品物一式</i>
+├─ tools/
+│   └─ candidates.py <i>DBを読み取り専用で参照</i>
+└─ .claude/commands/ <i>業務の手順書 6種</i></pre>
+          <ul class="tech">
+            <li><b>AIエージェント</b><span>Claude Code（CLAUDE.md による行動規範、カスタムスラッシュコマンド）</span></li>
+            <li><b>データ連携</b><span>Python ／ SQLite（読み取り専用の接続）／ JSON</span></li>
+            <li><b>案件情報の整理</b><span>公開されている案件情報を整理する自作ツール（Python・Claude API による一次評価）</span></li>
+            <li><b>記録と方針</b><span>Markdown（台帳・事業定義・選定基準・週次提案）</span></li>
+            <li><b>開発する側</b><span>Python ／ Streamlit ／ Claude API ／ pandas ほか、案件に応じて</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 提供できること -->
+    <section class="block" id="offer">
+      <div class="sec-head">
+        <p class="label">ご提供できること</p>
+        <div>
+          <h2>同じ型で、御社の業務もAIに任せられます。</h2>
+          <p>「AIが準備し、人が決める」「判断の基準を文書で渡す」という型は、受注業務に限らず使えます。たとえば、こんな形です。</p>
+        </div>
+      </div>
+      <div class="sec-body">
+        <div class="offer">
+          <div>
+            <h3>問い合わせメールの一次対応</h3>
+            <dl>
+              <dt>AIが行う</dt><dd>重要度と担当部署で仕分け、返信の下書きをつくる</dd>
+              <dt>人が行う</dt><dd class="seal">下書きを確認して送信する</dd>
+            </dl>
+          </div>
+          <div>
+            <h3>経費・請求書の処理</h3>
+            <dl>
+              <dt>AIが行う</dt><dd>決まったルールで判定し、迷うものだけ候補を並べる</dd>
+              <dt>人が行う</dt><dd class="seal">候補を承認したものだけ登録する</dd>
+            </dl>
+          </div>
+          <div>
+            <h3>社内の質問への回答</h3>
+            <dl>
+              <dt>AIが行う</dt><dd>社内文書を検索し、根拠の文書を示して回答する</dd>
+              <dt>人が行う</dt><dd class="seal">根拠を見て、回答を使うか判断する</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div>
+        <h2>業務の「どこまでAIに任せるか」から、一緒に考えます。</h2>
+        <p>要件がまだ曖昧な段階でも大丈夫です。今の業務の流れを伺い、AIに任せる部分と人が判断する部分の線引きからご提案します。</p>
+      </div>
+      <a class="btn" href="https://crowdworks.jp/public/employees/6634091" target="_blank" rel="noopener">クラウドワークスで相談する</a>
+    </section>
+  </main>
+
+  <footer>
+    <span>AI社長カンパニー — 制作：updating30</span>
+    <span>記載の件数は 2026年10月時点の運用記録です（採点の例の案件名・点数は架空）</span>
+  </footer>
+</div>
+
+</body>
+</html>
